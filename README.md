@@ -48,6 +48,8 @@ Forest monitoring at scale requires accurate estimation of structural attributes
 **Spatial resolution:** 25m grid  
 **Training patches:** 724 (64×64 pixels) | Validation: 145 | Test: 109
 
+Processed patches, rasters, and auxiliary files are available on Hugging Face: [siyux1927/imaestro-sar-forest](https://huggingface.co/datasets/siyux1927/imaestro-sar-forest)
+
 ## Results
 
 ### Performance Summary
