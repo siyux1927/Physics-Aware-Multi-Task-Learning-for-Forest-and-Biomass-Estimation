@@ -97,8 +97,8 @@ L_reg = sqrt(1/M Σ (ŷ - y)²)  # Only finite values
 | Picea | 0.835 | 0.032 | 0.063 |
 | Quercus | 0.008 | 0.008 | 0.015 |
 
-**Key observations:**
-- Pinus achieves highest performance (Dice=0.889) due to distinct SAR signature
+Key observations:
+- Pinus achieves the highest performance (Dice=0.889) due to its distinct SAR signature
 - Fagus and Abies show moderate performance despite high abundance
 - Quercus severely underperforms, likely due to SAR similarity with other genera
 
@@ -109,7 +109,7 @@ L_reg = sqrt(1/M Σ (ŷ - y)²)  # Only finite values
 <div style="text-align: center;">
 <img src="../@plots/training-results/baseline-unet/baseline-height-scatter-plot.png" width="49%" />
 <img src="../@plots/training-results/baseline-unet/baseline-biomass-scatter-plot.png" width="49%" />
-<p style="text-align: center; font-style: italic; margin-top: 5px;">Height scatter plot (left) shows systematic underestimation for tall forests (>30m) and overestimation for short forests (<20m), with predictions clustering around dataset mean. Biomass predictions (right) exhibit severe saturation - model outputs confined to 50-120 t/ha regardless of true values (0-400 t/ha), characteristic of C-band SAR signal saturation beyond ~100 t/ha threshold.</p>
+<p style="text-align: center; font-style: italic; margin-top: 5px;">Height scatter plot (left) shows systematic underestimation for tall forests (>30m) and overestimation for short forests (<20m). Biomass predictions (right) are confined to 50-120 t/ha regardless of true values (0-400 t/ha), characteristic of C-band saturation beyond ~100 t/ha.</p>
 </div>
 
 <img src="../@plots/training-results/baseline-unet/baseline-all-tasks-samples.png" width="60%" />
@@ -120,12 +120,12 @@ L_reg = sqrt(1/M Σ (ŷ - y)²)  # Only finite values
 
 <div style="text-align: center;">
 <img src="../@plots/training-results/mtl/height-biomass-scatter-plot.png" width="60%" />
-<p style="text-align: center; font-style: italic; margin-top: 5px;">Multi-task predictions show similar patterns to baseline. Height (left) maintains clustering around mean. Biomass (right) still saturates, though slightly improved R² suggests more consistent predictions within observable range.</p>
+<p style="text-align: center; font-style: italic; margin-top: 5px;">Multi-task predictions show similar patterns to baseline. Height maintains clustering around mean. Biomass still saturates, though slightly improved R² suggests more consistent predictions within observable range.</p>
 </div>
 
 <div style="text-align: center;">
 <img src="../@plots/training-results/mtl/mtl-all-tasks-samples.png" width="60%" />
-<p style="text-align: center; font-style: italic; margin-top: 5px;">Multi-task predictions maintain comparable quality to baselines. Height appears slightly smoother (regularization from shared encoder). Biomass shows marginally improved spatial coherence in transition zones, consistent with allometric constraint.</p>
+<p style="text-align: center; font-style: italic; margin-top: 5px;">Multi-task predictions maintain comparable quality to baselines. Height appears slightly smoother due to shared encoder regularization. Biomass shows marginally improved spatial coherence in transition zones.</p>
 </div>
 
 ## Multi-Task Learning Analysis
@@ -137,11 +137,11 @@ L_reg = sqrt(1/M Σ (ŷ - y)²)  # Only finite values
 <p style="text-align: center; font-style: italic; margin-top: 5px;">Cosine similarity between task-specific gradients in shared encoder across training epochs.</p>
 </div>
 
-**Findings:**
-- **Height-biomass pair** shows strongest alignment (0.4-0.9), validating allometric coupling
-- **Segmentation-height pair** exhibits moderate positive alignment (0.4-0.7) - both benefit from canopy structure features
-- **Segmentation-biomass pair** shows weakest/variable alignment (-0.3 to 0.6) - partially conflicting feature requirements
-- All pairs converge to positive alignment in final epochs, indicating successful task balancing
+Findings:
+- **Height-biomass pair** shows strongest alignment (0.4-0.9), consistent with allometric coupling
+- **Segmentation-height pair** exhibits moderate positive alignment (0.4-0.7)
+- **Segmentation-biomass pair** shows weakest/variable alignment (-0.3 to 0.6)
+- All pairs converge to positive alignment in final epochs
 
 ### Feature Similarity (CKA Analysis)
 
@@ -150,11 +150,11 @@ L_reg = sqrt(1/M Σ (ŷ - y)²)  # Only finite values
 
 **Task relationship hierarchy:**
 
-1. **Height-Biomass (strongest):** CKA=0.77-0.81 at deep layers, remains high (0.64-0.81) through shallow layers. Sustained similarity confirms allometric constraint successfully enforces consistent feature learning.
+1. **Height-Biomass (strongest):** CKA=0.77-0.81 at deep layers, remains high (0.64-0.81) through shallow layers. High similarity confirms the allometric constraint enforces consistent feature learning.
 
-2. **Segmentation-Height (moderate):** CKA>0.7 at layer 4, decreases to 0.51-0.66 at shallow layers. Progressive specialization - both extract canopy structure initially, then diverge for task-specific refinement.
+2. **Segmentation-Height (moderate):** CKA>0.7 at layer 4, decreases to 0.51-0.66 at shallow layers. Both extract canopy structure initially, then diverge for task-specific refinement.
 
-3. **Segmentation-Biomass (weakest):** CKA=0.25-0.51 across all layers. Flat pattern indicates immediate divergence after bottleneck - fundamentally different feature processing requirements.
+3. **Segmentation-Biomass (weakest):** CKA=0.25-0.51 across all layers. Flat pattern indicates immediate divergence after bottleneck, reflecting fundamentally different feature requirements.
 
 ### Layer-wise Representations
 
@@ -162,47 +162,34 @@ L_reg = sqrt(1/M Σ (ŷ - y)²)  # Only finite values
 *Feature maps from shared encoder (top) and task-specific decoders (bottom) for a single test sample.*
 
 **Encoder progression:**
-- **E1 (128×64×64):** Emphasizes edges and local texture from SAR speckle
-- **E2 (256×32×32):** Captures forest stand structure at larger scales
+- **E1 (128×64×64):** Edges and local texture from SAR speckle
+- **E2 (256×32×32):** Forest stand structure at larger scales
 - **E3 (512×16×16):** Coarser spatial organization
-- **Bottleneck (1024×8×8):** Compressed representation integrating ~800×800m receptive fields
+- **Bottleneck (1024×8×8):** Compressed representation with ~800×800m receptive field
 
 **Decoder specialization:**
-- **Segmentation (s2-s4):** Sharp genus boundaries emerge, recovering fine spatial detail via skip connections
-- **Height (h2-h4):** Smooth gradients reflecting continuous nature, extracts volume scattering patterns
-- **Biomass (b2-b4):** Distinct spatial organization emphasizing high backscatter regions, but uniform activations reflect saturation problem
+- **Segmentation (s2-s4):** Sharp genus boundaries via skip connections
+- **Height (h2-h4):** Smooth gradients reflecting continuous volume scattering patterns
+- **Biomass (b2-b4):** Distinct spatial organization emphasizing high backscatter regions, but uniform activations reflecting saturation
 
-**Key insight:** Shared encoder learns structured patterns useful for all tasks. Decoders progressively specialize from shared bottleneck to task-specific outputs, validating architectural design.
+## Summary
 
-## Key Findings
+**What works:**
+- Multi-task learning matches single-task baselines while using a single shared encoder
+- Uncertainty weighting successfully balances competing task objectives
+- Allometric constraint couples height-biomass tasks (high gradient alignment, CKA similarity)
+- Task hierarchy matches ecological expectations: Height-Biomass > Segmentation-Height > Segmentation-Biomass
 
-### What Works
-
-✅ **Multi-task learning achieves parity** with single-task baselines while using single shared encoder  
-✅ **Uncertainty weighting successfully balances** competing task objectives  
-✅ **Allometric constraint couples** height-biomass tasks (high gradient alignment, CKA similarity)  
-✅ **Shared encoder learns meaningful features** evidenced by structured representations at all depths  
-✅ **Task hierarchy validated:** Height-biomass > Segmentation-height > Segmentation-biomass
-
-### Limitations
-
-⚠️ **C-band SAR saturation** fundamentally limits biomass estimation beyond ~100 t/ha  
-⚠️ **Height sensitivity** constrained by C-band wavelength - moderate R² reflects limited information  
-⚠️ **Class imbalance** causes poor performance on rare genera (Quercus, Fraxinus, Picea)  
-⚠️ **Absolute performance** remains modest despite architectural sophistication
+**Limitations:**
+- C-band SAR saturation fundamentally limits biomass estimation beyond ~100 t/ha
+- Height sensitivity constrained by C-band wavelength
+- Class imbalance causes poor performance on rare genera (Quercus, Fraxinus, Picea)
 
 ## Scripts & Notebooks
 
-- `jupyter-notebooks/imaestro_baseline.ipynb` for baseline model training
-- `jupyter-notebooks/imaestro_mtl_norm-loss.ipynb` for multi-task learning
+- `jupyter-notebooks/imaestro_baseline.ipynb` — baseline model training
+- `jupyter-notebooks/imaestro_mtl_norm-loss.ipynb` — multi-task learning
 
 ## Conclusions
 
-This work demonstrates that **physics-aware multi-task learning** provides a viable framework for forest attribute estimation from SAR data. While C-band limitations constrain absolute performance, the approach successfully:
-
-1. Learns shared representations beneficial across multiple tasks
-2. Automatically balances competing objectives via uncertainty weighting
-3. Incorporates ecological knowledge through allometric regularization
-4. Provides interpretable analysis of task relationships and feature learning
-
-The gradient alignment and CKA analyses reveal clear task hierarchies matching ecological expectations, validating the multi-task approach. Future work should focus on overcoming SAR wavelength limitations through L-band integration and multi-modal fusion.
+Multi-task learning provides a viable framework for forest attribute estimation from SAR data. C-band limitations constrain absolute performance, but gradient alignment and CKA analyses confirm that the model learns shared encoder features with task-specific decoder specialization. Future work should focus on L-band integration and multi-modal fusion.

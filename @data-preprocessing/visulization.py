@@ -441,7 +441,7 @@ def visualize_all_sites_rasters(
 
     # 设置列标题（只在第一行上方显示波段名）
     for j, label in enumerate(col_labels):
-        axes[0, j].set_title(label, fontsize=10)
+        axes[0, j].set_title(label, fontsize=12)
 
     # 加载 genus_map 用于统一 genus 色标范围
     with open(GENUS_MAP_PATH, "r", encoding="utf-8") as f:
@@ -461,7 +461,6 @@ def visualize_all_sites_rasters(
         ("fraxinus", "Fra."),
         ("quercus", "Que."),
         ("picea", "Pic."),
-        ("carpinus", "Car."),
     ]
 
     name_to_code_lower: dict[str, int] = {}
@@ -505,7 +504,7 @@ def visualize_all_sites_rasters(
             nodatas.append(nodata)
 
         # 在最左侧子图上竖直写 site 名
-        axes[i, 0].set_ylabel(site.capitalize(), rotation=90, fontsize=10)
+        axes[i, 0].set_ylabel(site.capitalize(), rotation=90, fontsize=12)
 
         for j, (ax, img, nodata) in enumerate(zip(axes[i], arrays, nodatas)):
             if j == 2:
@@ -552,17 +551,30 @@ def visualize_all_sites_rasters(
                 else:
                     cmap = "viridis"
 
+                fixed_range: tuple[float, float] | None
+                if j in (0, 1):
+                    fixed_range = (-29.0, 27.0)
+                elif j == 3:
+                    fixed_range = (5.0, 46.0)
+                elif j == 4:
+                    fixed_range = (0.0, 430.0)
+                else:
+                    fixed_range = None
+
                 valid_mask = np.isfinite(img)
                 if nodata is not None:
                     valid_mask &= img != nodata
 
-                if valid_mask.any():
-                    vmin = float(np.nanmin(img[valid_mask]))
-                    vmax = float(np.nanmax(img[valid_mask]))
-                    if not np.isfinite(vmin) or not np.isfinite(vmax):
-                        vmin, vmax = 0.0, 1.0
+                if fixed_range is not None:
+                    vmin, vmax = fixed_range
                 else:
-                    vmin, vmax = 0.0, 1.0
+                    if valid_mask.any():
+                        vmin = float(np.nanmin(img[valid_mask]))
+                        vmax = float(np.nanmax(img[valid_mask]))
+                        if not np.isfinite(vmin) or not np.isfinite(vmax):
+                            vmin, vmax = 0.0, 1.0
+                    else:
+                        vmin, vmax = 0.0, 1.0
 
                 im = ax.imshow(img, cmap=cmap, vmin=vmin, vmax=vmax, aspect='auto')
 
@@ -592,7 +604,7 @@ def visualize_all_sites_rasters(
 def plot_genus_value_histograms_across_sites(
     value_type: str = "biomass",
     sites: Iterable[str] = ("bauges", "milicz", "sneznik"),
-    bins: int = 20,
+    bins: int = 25,
     save_path: str | None = None,
     ):
     """按属（genus）分别绘制 height/biomass 在所有 site 上的像元直方图。
@@ -712,13 +724,26 @@ def plot_genus_value_histograms_across_sites(
         n_cols,
         figsize=(2 * n_cols, 2.6 * n_rows),
         sharex=True,
-        sharey=True,
+        sharey="row",
     )
     # 统一为 1D 列表，便于遍历
     if isinstance(axes, plt.Axes):
         axes_list = [axes]
     else:
         axes_list = np.array(axes).ravel().tolist()
+
+    def _fmt_sci_no_plus(x: float, _pos: int) -> str:
+        if x == 0:
+            return "0"
+        ax = abs(x)
+        exp = int(np.floor(np.log10(ax)))
+        mant = x / (10 ** exp)
+        mant_rounded = np.round(mant, 2)
+        if float(mant_rounded).is_integer():
+            mant_str = str(int(mant_rounded))
+        else:
+            mant_str = ("%.2f" % mant_rounded).rstrip("0").rstrip(".")
+        return f"{mant_str}e{exp}"
 
     for idx, (genus_name, vals) in enumerate(zip(genus_names, values_list)):
         ax = axes_list[idx]
@@ -730,9 +755,25 @@ def plot_genus_value_histograms_across_sites(
             edgecolor="black",
             linewidth=0.4,
         )
-        ax.set_title(genus_name, fontsize=20)
-        ax.yaxis.set_major_formatter(FuncFormatter(lambda x, p: f"{x:.1e}"))
-        ax.tick_params(axis="both", labelsize=13)
+        ax.set_title(genus_name, fontsize=17)
+        ax.yaxis.set_major_formatter(FuncFormatter(_fmt_sci_no_plus))
+        ax.tick_params(axis="both", labelsize=15)
+
+        r = idx // n_cols
+        if value_type == "height":
+            if r == 1:
+                ax.set_ylim(0, 2000)
+            elif r == 2:
+                ax.set_ylim(0, 400)
+            elif r == 3:
+                ax.set_ylim(0, 70)
+        elif value_type == "biomass":
+            if r == 1:
+                ax.set_ylim(0, 3000)
+            elif r == 2:
+                ax.set_ylim(0, 800)
+            elif r == 3:
+                ax.set_ylim(0, 150)
 
     # 对多余子图（如果有）隐藏坐标轴
     for j in range(n_genus, len(axes_list)):
@@ -1230,15 +1271,48 @@ def visualize_sample_patches(
     row_labels = ["Train", "Validation", "Test"]
     col_labels = ["VV", "VH", "Genus", "Height", "Biomass"]
 
+    with open(GENUS_MAP_PATH, "r", encoding="utf-8") as f:
+        genus_to_code = json.load(f)
+
+    main_genus_order = [
+        ("fagus", "Fag."),
+        ("abies", "Abi."),
+        ("pinus", "Pin."),
+        ("fraxinus", "Fra."),
+        ("quercus", "Que."),
+        ("picea", "Pic."),
+    ]
+
+    name_to_code_lower: dict[str, int] = {}
+    for name, code in genus_to_code.items():
+        try:
+            name_to_code_lower[name.lower()] = int(code)
+        except Exception:
+            continue
+
+    major_codes: list[int] = []
+    major_labels: list[str] = []
+    for name, short in main_genus_order:
+        code = name_to_code_lower.get(name)
+        if code is not None:
+            major_codes.append(code)
+            major_labels.append(short)
+
+    all_codes = [int(v) for v in genus_to_code.values() if str(v).lstrip("-").isdigit()]
+    if all_codes:
+        genus_vmin, genus_vmax = min(all_codes), max(all_codes)
+    else:
+        genus_vmin, genus_vmax = 0, 1
+
     fig, axes = plt.subplots(3, 5, figsize=(12, 6))
 
     # 在第一行上方写列标题
     for j, label in enumerate(col_labels):
-        axes[0, j].set_title(label, fontsize=10)
+        axes[0, j].set_title(label, fontsize=12)
 
     # 行首竖着写 train/val/test
     for i, row_label in enumerate(row_labels):
-        axes[i, 0].set_ylabel(row_label, rotation=90, fontsize=10)
+        axes[i, 0].set_ylabel(row_label, rotation=90, fontsize=12)
 
     for i in range(3):
         for j in range(5):
@@ -1256,15 +1330,7 @@ def visualize_sample_patches(
 
                 img_masked = np.ma.array(img_int, mask=mask_invalid)
 
-                # 仅基于有效像元的取值确定 vmin/vmax 和刻度
-                valid_vals = img_int[~mask_invalid]
-                if valid_vals.size == 0:
-                    vmin, vmax = 0, 1
-                    ticks = []
-                else:
-                    unique_vals = np.unique(valid_vals)
-                    vmin, vmax = int(unique_vals.min()), int(unique_vals.max())
-                    ticks = unique_vals.tolist()
+                vmin, vmax = genus_vmin, genus_vmax
 
                 cmap = plt.get_cmap("tab20").copy()
                 cmap.set_bad(color="white")
@@ -1284,8 +1350,9 @@ def visualize_sample_patches(
                     pad=0.02,
                     aspect=30,      # keep bar tall relative to width
                 )
-                if ticks:
-                    cbar.set_ticks(ticks)
+                if major_codes:
+                    cbar.set_ticks(major_codes)
+                    cbar.set_ticklabels(major_labels)
                 cbar.ax.tick_params(labelsize=8)
 
             else:
@@ -1295,14 +1362,21 @@ def visualize_sample_patches(
                 else:
                     cmap = "viridis"
 
-                valid_mask = np.isfinite(img)
-                if valid_mask.any():
-                    vmin = float(np.nanmin(img[valid_mask]))
-                    vmax = float(np.nanmax(img[valid_mask]))
-                    if not np.isfinite(vmin) or not np.isfinite(vmax):
-                        vmin, vmax = 0.0, 1.0
+                if j in (0, 1):
+                    vmin, vmax = -25.0, 5.0
+                elif j == 3:
+                    vmin, vmax = 6.0, 39.0
+                elif j == 4:
+                    vmin, vmax = 0.0, 240.0
                 else:
-                    vmin, vmax = 0.0, 1.0
+                    valid_mask = np.isfinite(img)
+                    if valid_mask.any():
+                        vmin = float(np.nanmin(img[valid_mask]))
+                        vmax = float(np.nanmax(img[valid_mask]))
+                        if not np.isfinite(vmin) or not np.isfinite(vmax):
+                            vmin, vmax = 0.0, 1.0
+                    else:
+                        vmin, vmax = 0.0, 1.0
 
                 im = ax.imshow(img, cmap=cmap, vmin=vmin, vmax=vmax)
 
@@ -1317,7 +1391,7 @@ def visualize_sample_patches(
                 cbar.set_ticks(ticks)
                 cbar.formatter = FormatStrFormatter("%.1f")  # one decimal
                 cbar.update_ticks()
-                cbar.ax.tick_params(labelsize=8)
+                cbar.ax.tick_params(labelsize=10)
 
             ax.set_xticks([])
             ax.set_yticks([])
@@ -1352,10 +1426,10 @@ def main():
     #     site="sneznik",
     #     save_path="../@plots/data-insight/site_rasters_sneznik.png",
     # )
-    visualize_all_sites_rasters(
-        sites=("bauges", "milicz", "sneznik"),
-        save_path="../@plots/data-insight/all_sites_rasters.png",
-    )
+    # visualize_all_sites_rasters(
+    #     sites=("bauges", "milicz", "sneznik"),
+    #     save_path="../@plots/data-insight/all_sites_rasters.png",
+    # )
     # plot_genus_distribution_by_split(
     #     save_path="../@plots/data-insight/genus_split_distribution.png"
     # )

@@ -39,7 +39,7 @@ Biomass (kg) = a × DBH^b × wood_density
 - Wood density range: 0.35-0.90 g/cm³ across species
 - Aggregated to cell level and converted to t/ha
 
-**Height statistics** computed as 95th percentile (height95) - robust metric for canopy top height less sensitive to outliers.
+**Height statistics** computed as 95th percentile (height95) — robust metric for canopy top height, less sensitive to outliers.
 
 **Genus classification** extracted from species names, reducing 51 species to 31 genus-level categories. Dominant genus per cell determined by tree count.
 
@@ -60,7 +60,7 @@ Biomass (kg) = a × DBH^b × wood_density
 
 **Terrain correction** using Range-Doppler orthorectification with SRTM 1-arcsec DEM, correcting topographic distortions critical for mountainous sites.
 
-**Resampling to 25m grid** using bilinear interpolation ensures perfect alignment with structural layers.
+**Resampling to 25m grid** using bilinear interpolation ensures alignment with structural layers.
 
 **Backscatter conversion** to decibels (dB):
 ```
@@ -101,19 +101,19 @@ Biomass (kg) = a × DBH^b × wood_density
 - Test: 109 patches (10%)
 
 <img class="center" src="../@plots/data-insight/sample_patches.png" width="70%" />
-*Example patches showing all five channels across train/val/test splits. SAR channels display speckle patterns, while structural layers show spatial clustering.*
+*Example patches showing all five channels across train/val/test splits.*
 
 ## Data Distribution Analysis
 
 ### Genus Balance
 
 <img class="center" src="../@plots/data-insight/genus_split_distribution_patch_level.png" width="70%" />
-*Patch counts by dominant genus across splits. Fagus (beech) most abundant with 300+ training patches, followed by Abies and Pinus.*
+*Patch counts by dominant genus across splits. Fagus most abundant with 300+ training patches, followed by Abies and Pinus.*
 
 ### Target Variable Distributions
 
 <img class="center" src="../@plots/data-insight/height_biomass_hist_split.png" width="60%" />
-*Pixel-level distributions show right-skewed patterns typical of forest data. Biomass ranges 0-400 t/ha, height 10-45m. Similar distributions across splits confirm balanced splitting.*
+*Pixel-level distributions show right-skewed patterns typical of forest data. Similar distributions across splits confirm balanced splitting.*
 
 ## Output Files
 
@@ -131,11 +131,11 @@ sites_{split}.npy            # Shape: (N,) - site names
 
 ## Scripts
 
-- `raw_to_structural_data.py` - Process I-MAESTRO tree data to rasters
-- `sentinel1_preprocessing.py` - SAR calibration and terrain correction
-- `build_training_patches.py` - Patch extraction with spatial blocking
-- `visualization.py` - Generate data exploration plots
-- `main.py` - Run complete pipeline
+- `raw_to_structural_data.py` — Process I-MAESTRO tree data to rasters
+- `sentinel1_preprocessing.py` — SAR calibration and terrain correction
+- `build_training_patches.py` — Patch extraction with spatial blocking
+- `visualization.py` — Generate data exploration plots
+- `main.py` — Run complete pipeline
 
 ## Usage
 
@@ -145,8 +145,8 @@ python main.py --sites bauges milicz sneznik --patch-size 64 --stride 32
 
 ## Key Design Decisions
 
-✅ **Species-specific allometry** - Accurate biomass using calibrated wood density values  
-✅ **Edge-preserving smoothing** - Reduces noise while maintaining spatial structure  
-✅ **Spatial blocking** - Prevents autocorrelation-inflated performance estimates  
-✅ **Perfect alignment** - Ensures pixel-to-pixel correspondence between SAR and targets  
-✅ **Quality filtering** - Excludes patches dominated by NoData or non-forest areas
+- **Species-specific allometry:** Accurate biomass using calibrated wood density values
+- **Edge-preserving smoothing:** Reduces noise while maintaining spatial structure
+- **Spatial blocking:** Prevents autocorrelation-inflated performance estimates
+- **Perfect alignment:** Ensures pixel-to-pixel correspondence between SAR and targets
+- **Quality filtering:** Excludes patches dominated by NoData or non-forest areas
