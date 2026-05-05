@@ -11,3 +11,5 @@ data_preprocessing_methodology.md
 
 # Preprocessing cache
 @data-preprocessing/__pycache__/
+
+@data/HF_DATASET_CARD.md
